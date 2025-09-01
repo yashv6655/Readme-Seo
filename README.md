@@ -9,7 +9,7 @@ Live: https://readme-seo.vercel.app/
 - Deployed: Production at https://readme-seo.vercel.app/ (Vercel).
 - Database: Supabase with RLS, tables for `readmes`.
 - Secure: Auth via Supabase, RLS‑protected tables, protected routes, server‑side env usage, minimal analytics PII.
-- ICP Fit (Sita): Helps devs and teams quickly produce clear docs that reduce “where is this?” questions and speed onboarding.
+- ICP Fit (Sita): Helps devs and teams quickly produce clear docs that reduce “where is this?” questions and speed onboarding, which helps search engines fine the right codebase and code sections faster.
 - Design: Clean, responsive UI using Tailwind, dark mode, consistent components.
 - Analytics: PostHog event tracking for usage, success, and UX flows.
 

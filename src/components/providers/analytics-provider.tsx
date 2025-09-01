@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 // Importing posthog-js directly; ensure dependency exists in package.json
@@ -14,8 +14,8 @@ declare global {
 
 type Props = { children?: React.ReactNode };
 
-// Initializes PostHog and tracks page views on route changes.
-export default function AnalyticsProvider({ children }: Props) {
+// Component that uses useSearchParams (needs to be wrapped in Suspense)
+function AnalyticsProviderInner({ children }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -51,4 +51,13 @@ export default function AnalyticsProvider({ children }: Props) {
   }, [pathname, searchParams]);
 
   return children as React.ReactElement | null;
+}
+
+// Initializes PostHog and tracks page views on route changes.
+export default function AnalyticsProvider({ children }: Props) {
+  return (
+    <Suspense fallback={children as React.ReactElement | null}>
+      <AnalyticsProviderInner>{children}</AnalyticsProviderInner>
+    </Suspense>
+  );
 }

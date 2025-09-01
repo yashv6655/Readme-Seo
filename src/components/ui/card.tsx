@@ -19,6 +19,8 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     );
 
     if (hover) {
+      // Filter out potentially conflicting props for motion.div
+      const { onDrag, onDragStart, onDragEnd, ...motionProps } = props as any;
       return (
         <motion.div
           ref={ref}
@@ -30,7 +32,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
               : '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
           }}
           transition={{ duration: 0.2 }}
-          {...props}
+          {...motionProps}
         >
           {children}
         </motion.div>

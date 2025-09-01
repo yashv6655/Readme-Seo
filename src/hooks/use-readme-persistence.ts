@@ -16,6 +16,11 @@ interface UseReadmePersistenceReturn {
   lastSaved: Date | null
   error: string | null
   
+  // Pending state for immediate UI updates
+  pendingContent: string
+  pendingMetadata: Partial<ReadmeMetadata>
+  pendingTitle: string
+  
   // Actions
   loadCurrentReadme: (githubUrl?: string) => Promise<void>
   saveReadme: (force?: boolean) => Promise<void>
@@ -232,6 +237,9 @@ export function useReadmePersistence(
     isSaving,
     lastSaved,
     error,
+    pendingContent,
+    pendingMetadata,
+    pendingTitle,
     loadCurrentReadme,
     saveReadme,
     updateContent,

@@ -34,10 +34,12 @@ function ReadmeReviewContent() {
     saveReadme,
     updateContent,
     updateMetadata,
+    pendingContent: hookPendingContent,
+    pendingMetadata,
   } = useReadmePersistence();
 
   // Get pending content for editor (what user is typing)
-  const [pendingContent, setPendingContent] = useState("");
+  const [localPendingContent, setLocalPendingContent] = useState("");
 
   // Local state for UI interactions
   const [repo, setRepo] = useState("");
@@ -46,14 +48,15 @@ function ReadmeReviewContent() {
   const [error, setError] = useState<string | null>(null);
   const [optimized, setOptimized] = useState<string | null>(null);
 
-  // Derived state from currentReadme
-  const readme = pendingContent || currentReadme?.content || "";
-  const metadata = (currentReadme?.metadata as ReadmeMetadata) || {};
-  const score = metadata.score || null;
-  const sha = metadata.sha || null;
-  const actionSource = metadata.actionSource || "editor";
-  const previewSource = metadata.previewSource || "editor";
-  const lastAction = metadata.lastAction || null;
+  // Derived state from currentReadme and pending changes
+  const readme = localPendingContent || hookPendingContent || currentReadme?.content || "";
+  // Use pending metadata for immediate updates, fall back to saved metadata
+  const combinedMetadata = { ...(currentReadme?.metadata as ReadmeMetadata || {}), ...pendingMetadata };
+  const score = combinedMetadata.score || null;
+  const sha = combinedMetadata.sha || null;
+  const actionSource = combinedMetadata.actionSource || "editor";
+  const previewSource = combinedMetadata.previewSource || "editor";
+  const lastAction = combinedMetadata.lastAction || null;
 
   // Initialize repo and branch from metadata
   useEffect(() => {
@@ -63,9 +66,9 @@ function ReadmeReviewContent() {
       setBranch(meta.branch || "");
       setOptimized(meta.optimized || null);
     }
-    // Sync pending content with loaded content
+    // Sync local pending content with loaded content
     if (currentReadme?.content !== undefined) {
-      setPendingContent(currentReadme.content);
+      setLocalPendingContent(currentReadme.content);
     }
   }, [currentReadme]);
 
@@ -94,7 +97,7 @@ function ReadmeReviewContent() {
       
       // Update content and metadata
       updateContent(data.content || "");
-      setPendingContent(data.content || "");
+      setLocalPendingContent(data.content || "");
       updateMetadata({
         repo: repo.trim(),
         branch: branch || undefined,
@@ -223,7 +226,7 @@ function ReadmeReviewContent() {
     if (!ok) return;
     
     updateContent(optimized);
-    setPendingContent(optimized);
+    setLocalPendingContent(optimized);
     updateMetadata({
       optimized: undefined,
       previewSource: "editor",
@@ -331,7 +334,7 @@ function ReadmeReviewContent() {
                 className="border rounded-lg w-full h-[520px] p-3 font-mono text-sm bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
                 value={readme}
                 onChange={(e) => {
-                  setPendingContent(e.target.value);
+                  setLocalPendingContent(e.target.value);
                   updateContent(e.target.value);
                 }}
                 placeholder="# Paste or fetch a README.md here"

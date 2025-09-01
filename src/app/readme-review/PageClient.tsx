@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SeoScore } from "@/components/ui/seo-score";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useReadmePersistence } from "@/hooks/use-readme-persistence";
+import type { ReadmeMetadata } from "@/lib/database/types";
 
 type ScoreResult = {
   score: number;
@@ -21,17 +23,45 @@ type ScoreResult = {
 type Source = "editor" | "optimized";
 
 function ReadmeReviewContent() {
+  // Persistence hook for database integration
+  const {
+    currentReadme,
+    isLoading: isLoadingReadme,
+    isSaving,
+    lastSaved,
+    error: persistenceError,
+    loadCurrentReadme,
+    saveReadme,
+    updateContent,
+    updateMetadata,
+    setTitle,
+  } = useReadmePersistence();
+
+  // Local state for UI interactions
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
-  const [readme, setReadme] = useState("");
-  const [sha, setSha] = useState<string | null>(null);
   const [loading, setLoading] = useState<"fetch" | "score" | "opt" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [score, setScore] = useState<ScoreResult | null>(null);
   const [optimized, setOptimized] = useState<string | null>(null);
-  const [actionSource, setActionSource] = useState<Source>("editor");
-  const [previewSource, setPreviewSource] = useState<Source>("editor");
-  const [lastAction, setLastAction] = useState<string | null>(null);
+
+  // Derived state from currentReadme
+  const readme = currentReadme?.content || "";
+  const metadata = (currentReadme?.metadata as ReadmeMetadata) || {};
+  const score = metadata.score || null;
+  const sha = metadata.sha || null;
+  const actionSource = metadata.actionSource || "editor";
+  const previewSource = metadata.previewSource || "editor";
+  const lastAction = metadata.lastAction || null;
+
+  // Initialize repo and branch from metadata
+  useEffect(() => {
+    if (currentReadme?.metadata) {
+      const meta = currentReadme.metadata as ReadmeMetadata;
+      setRepo(meta.repo || "");
+      setBranch(meta.branch || "");
+      setOptimized(meta.optimized || null);
+    }
+  }, [currentReadme]);
 
   const currentContent = actionSource === "optimized" && optimized ? optimized : readme;
   const previewContent = previewSource === "optimized" && optimized ? optimized : readme;
@@ -39,9 +69,6 @@ function ReadmeReviewContent() {
   const fetchReadme = useCallback(async () => {
     setLoading("fetch");
     setError(null);
-    setScore(null);
-    setOptimized(null);
-    setLastAction("Fetched README");
     try {
       const url = new URL(`/api/readme`, window.location.origin);
       url.searchParams.set("repo", repo.trim());
@@ -49,20 +76,28 @@ function ReadmeReviewContent() {
       const res = await fetch(url.toString());
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to fetch README");
-      setReadme(data.content || "");
-      setSha(data.sha || null);
-    } catch (e: any) {
-      setError(e?.message || String(e));
+      
+      // Update content and metadata
+      updateContent(data.content || "");
+      updateMetadata({
+        repo: repo.trim(),
+        branch: branch || undefined,
+        sha: data.sha || undefined,
+        lastAction: "Fetched README",
+        optimized: undefined, // Clear optimized version
+        score: undefined, // Clear score
+      });
+      setOptimized(null);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(null);
     }
-  }, [repo, branch]);
+  }, [repo, branch, updateContent, updateMetadata]);
 
   const runScore = useCallback(async () => {
     setLoading("score");
     setError(null);
-    setScore(null);
-    setLastAction(`Scoring ${actionSource}`);
     try {
       const res = await fetch("/api/score", {
         method: "POST",
@@ -71,20 +106,25 @@ function ReadmeReviewContent() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to score");
-      setScore(data as ScoreResult);
-    } catch (e: any) {
-      setError(e?.message || String(e));
+      
+      // Update metadata with score and action
+      updateMetadata({
+        score: data as ScoreResult,
+        lastAction: `Scoring ${actionSource}`,
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(null);
     }
-  }, [currentContent, actionSource]);
+  }, [currentContent, actionSource, updateMetadata]);
 
   const runOptimize = useCallback(async () => {
     setLoading("opt");
     setError(null);
-    setOptimized(null);
     const willUseRepo = (!readme || readme.trim().length < 50) && !!repo;
-    setLastAction(willUseRepo ? "Generating from repo context" : "Optimizing editor content");
+    const actionText = willUseRepo ? "Generating from repo context" : "Optimizing editor content";
+    
     try {
       const res = await fetch("/api/optimize", {
         method: "POST",
@@ -97,25 +137,50 @@ function ReadmeReviewContent() {
       });
       const data = await res.text();
       if (!res.ok) throw new Error("Failed to optimize");
+      
       setOptimized(data);
-      setPreviewSource("optimized");
-    } catch (e: any) {
-      setError(e?.message || String(e));
+      // Update metadata with optimized content and preview source
+      updateMetadata({
+        optimized: data,
+        previewSource: "optimized",
+        lastAction: actionText,
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(null);
     }
-  }, [readme, repo, branch]);
+  }, [readme, repo, branch, updateMetadata]);
 
   const applyOptimized = useCallback(() => {
     if (!optimized) return;
     const ok = window.confirm("Replace editor content with optimized version?");
     if (!ok) return;
-    setReadme(optimized);
+    
+    updateContent(optimized);
+    updateMetadata({
+      optimized: null,
+      previewSource: "editor",
+      actionSource: "editor",
+      lastAction: "Applied optimized to editor",
+    });
     setOptimized(null);
-    setPreviewSource("editor");
-    setActionSource("editor");
-    setLastAction("Applied optimized to editor");
-  }, [optimized]);
+  }, [optimized, updateContent, updateMetadata]);
+
+  // Handle manual saves
+  const handleManualSave = useCallback(() => {
+    saveReadme(true); // Force save
+  }, [saveReadme]);
+
+  // Handle action source changes
+  const handleActionSourceChange = useCallback((source: Source) => {
+    updateMetadata({ actionSource: source });
+  }, [updateMetadata]);
+
+  // Handle preview source changes
+  const handlePreviewSourceChange = useCallback((source: Source) => {
+    updateMetadata({ previewSource: source });
+  }, [updateMetadata]);
 
   const breakdownList = useMemo(() => {
     if (!score?.breakdown) return [] as Array<[string, number]>;
@@ -135,12 +200,22 @@ function ReadmeReviewContent() {
             {lastAction && (
               <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground">{lastAction}</span>
             )}
+            {/* Save Status */}
+            <div className="flex items-center gap-2 text-xs">
+              {isSaving && <span className="text-yellow-600">Saving...</span>}
+              {!isSaving && lastSaved && (
+                <span className="text-green-600">Saved {new Date(lastSaved).toLocaleTimeString()}</span>
+              )}
+              {persistenceError && (
+                <span className="text-red-600">Save error</span>
+              )}
+            </div>
           </div>
           <div className="hidden sm:flex items-center gap-3">
             <div className="text-xs text-muted-foreground">Actions target</div>
             <div className="flex items-center space-x-1 bg-muted rounded-lg p-1">
-              <Button variant={actionSource === 'editor' ? 'default' : 'ghost'} size="sm" onClick={() => setActionSource('editor')}>Editor</Button>
-              <Button variant={actionSource === 'optimized' ? 'default' : 'ghost'} size="sm" onClick={() => setActionSource('optimized')} disabled={!optimized}>Optimized</Button>
+              <Button variant={actionSource === 'editor' ? 'default' : 'ghost'} size="sm" onClick={() => handleActionSourceChange('editor')}>Editor</Button>
+              <Button variant={actionSource === 'optimized' ? 'default' : 'ghost'} size="sm" onClick={() => handleActionSourceChange('optimized')} disabled={!optimized}>Optimized</Button>
             </div>
           </div>
         </div>
@@ -156,6 +231,7 @@ function ReadmeReviewContent() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="gradient" onClick={fetchReadme} loading={loading === 'fetch'} disabled={!repo}>Fetch README</Button>
+              <Button variant="outline" onClick={handleManualSave} loading={isSaving} disabled={isLoadingReadme}>Save</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -164,7 +240,9 @@ function ReadmeReviewContent() {
               <Input label="Branch (optional)" placeholder="default branch if empty" value={branch} onChange={(e) => setBranch(e.target.value)} />
               <div className="hidden lg:block" />
             </div>
-            {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+            {(error || persistenceError) && (
+              <p className="mt-3 text-sm text-red-500">{error || persistenceError}</p>
+            )}
           </CardContent>
         </Card>
 
@@ -179,7 +257,7 @@ function ReadmeReviewContent() {
               <textarea
                 className="border rounded-lg w-full h-[520px] p-3 font-mono text-sm bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
                 value={readme}
-                onChange={(e) => setReadme(e.target.value)}
+                onChange={(e) => updateContent(e.target.value)}
                 placeholder="# Paste or fetch a README.md here"
               />
             </CardContent>
@@ -198,8 +276,8 @@ function ReadmeReviewContent() {
             <CardHeader className="flex items-center justify-between">
               <CardTitle>Preview</CardTitle>
               <div className="flex items-center space-x-1 bg-muted rounded-lg p-1">
-                <Button variant={previewSource === 'editor' ? 'default' : 'ghost'} size="sm" onClick={() => setPreviewSource('editor')}>Editor</Button>
-                <Button variant={previewSource === 'optimized' ? 'default' : 'ghost'} size="sm" onClick={() => setPreviewSource('optimized')} disabled={!optimized}>Optimized</Button>
+                <Button variant={previewSource === 'editor' ? 'default' : 'ghost'} size="sm" onClick={() => handlePreviewSourceChange('editor')}>Editor</Button>
+                <Button variant={previewSource === 'optimized' ? 'default' : 'ghost'} size="sm" onClick={() => handlePreviewSourceChange('optimized')} disabled={!optimized}>Optimized</Button>
               </div>
             </CardHeader>
             <CardContent>

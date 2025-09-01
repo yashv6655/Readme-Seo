@@ -134,6 +134,11 @@
     font-feature-settings: 'tnum';
   }
 
+  /* Floating animation */
+  .floating {
+    animation: floating 6s ease-in-out infinite;
+  }
+
   /* README preview helpers */
   .readme-preview {
     word-wrap: break-word;
@@ -177,4 +182,9 @@
 @keyframes pulse {
   0%, 100% { opacity: 0.75; }
   50% { opacity: 1; }
+}
+
+@keyframes floating {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
 }

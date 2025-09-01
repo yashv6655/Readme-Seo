@@ -62,11 +62,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 animated-gradient opacity-20" />
+      
+      {/* Floating elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-4 md:left-20 w-24 h-24 md:w-32 md:h-32 bg-purple-500/10 rounded-full blur-xl floating" style={{ animationDelay: '0s' }} />
+        <div className="absolute top-40 right-4 md:right-32 w-32 h-32 md:w-48 md:h-48 bg-blue-500/10 rounded-full blur-xl floating" style={{ animationDelay: '2s' }} />
+        <div className="absolute bottom-40 left-1/4 w-20 h-20 md:w-24 md:h-24 bg-pink-500/10 rounded-full blur-xl floating" style={{ animationDelay: '4s' }} />
+        <div className="absolute bottom-20 right-4 md:right-20 w-28 h-28 md:w-36 md:h-36 bg-indigo-500/10 rounded-full blur-xl floating" style={{ animationDelay: '1s' }} />
+      </div>
+
+      <Card className="w-full max-w-md glass-card relative z-10">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Welcome</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-2xl text-center gradient-text">Welcome</CardTitle>
+          <CardDescription className="text-center text-muted-foreground">
             Sign in to your account or create a new one
           </CardDescription>
         </CardHeader>
@@ -82,13 +93,13 @@ export default function LoginPage() {
             </Alert>
           )}
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 smooth-transition">
+              <TabsTrigger value="signin" className="smooth-transition">Sign In</TabsTrigger>
+              <TabsTrigger value="signup" className="smooth-transition">Sign Up</TabsTrigger>
             </TabsList>
             
             <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
+              <form onSubmit={handleSignIn} className="space-y-4 smooth-transition">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -114,14 +125,14 @@ export default function LoginPage() {
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full btn-gradient smooth-transition" disabled={loading}>
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
               </form>
             </TabsContent>
             
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-4 smooth-transition">
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
@@ -148,7 +159,7 @@ export default function LoginPage() {
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full btn-gradient smooth-transition" disabled={loading}>
                   {loading ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </form>

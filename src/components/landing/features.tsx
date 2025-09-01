@@ -12,7 +12,7 @@ import {
   Shield,
   Rocket
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SeoScore } from '@/components/ui/seo-score';
 
 const features = [
@@ -132,7 +132,7 @@ export function Features() {
             Everything you need to create amazing READMEs
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            From SEO optimization to beautiful templates, we've got all the tools 
+            From SEO optimization to beautiful templates, we&apos;ve got all the tools 
             you need to make your projects stand out.
           </p>
         </motion.div>

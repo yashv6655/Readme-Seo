@@ -6,6 +6,12 @@ import { usePathname, useSearchParams } from "next/navigation";
 // Importing posthog-js directly; ensure dependency exists in package.json
 import posthog from "posthog-js";
 
+declare global {
+  interface Window {
+    __posthog_inited?: boolean;
+  }
+}
+
 type Props = { children?: React.ReactNode };
 
 // Initializes PostHog and tracks page views on route changes.
@@ -21,20 +27,19 @@ export default function AnalyticsProvider({ children }: Props) {
     const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com";
 
     // Avoid double init in Fast Refresh
-    if (!(window as any).__posthog_inited) {
+    if (!window.__posthog_inited) {
       posthog.init(key, {
         api_host: host,
         capture_pageview: false, // we will capture manually
       });
-      (window as any).__posthog_inited = true;
+      window.__posthog_inited = true;
 
       posthog.register({
         environment: process.env.NODE_ENV,
       });
     }
 
-    // Initial page view
-    posthog.capture("page_view", { path: window.location.pathname });
+    // Do not capture here; the route effect below will handle initial + subsequent views
   }, []);
 
   // Track route changes as page views
@@ -47,4 +52,3 @@ export default function AnalyticsProvider({ children }: Props) {
 
   return children as React.ReactElement | null;
 }
-

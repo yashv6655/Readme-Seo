@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireApiAuth } from '@/lib/auth/api-auth'
 import { getUserReadmes, createReadme } from '@/lib/database/readmes'
 import type { CreateReadmeInput } from '@/lib/database/types'
+import type { AuthUser } from '@/lib/auth/types'
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
     }
 
     const { user } = authResult
-    const readmes = await getUserReadmes(user.id)
+    const readmes = await getUserReadmes((user as AuthUser).id)
 
     return Response.json({ readmes })
   } catch (error) {
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
       template_id: body.template_id
     }
 
-    const readme = await createReadme(user.id, input)
+    const readme = await createReadme((user as AuthUser).id, input)
 
     return Response.json({ readme }, { status: 201 })
   } catch (error) {

@@ -31,11 +31,9 @@ function ReadmeReviewContent() {
     isSaving,
     lastSaved,
     error: persistenceError,
-    loadCurrentReadme,
     saveReadme,
     updateContent,
     updateMetadata,
-    setTitle,
   } = useReadmePersistence();
 
   // Local state for UI interactions
@@ -218,7 +216,7 @@ function ReadmeReviewContent() {
     
     updateContent(optimized);
     updateMetadata({
-      optimized: null,
+      optimized: undefined,
       previewSource: "editor",
       actionSource: "editor",
       lastAction: "Applied optimized to editor",
@@ -352,7 +350,7 @@ function ReadmeReviewContent() {
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw]}
                   components={{
-                    a: ({ node, ...props }) => (
+                    a: ({ ...props }) => (
                       <a {...props} target="_blank" rel="noopener noreferrer" />
                     ),
                   }}

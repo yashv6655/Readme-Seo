@@ -214,7 +214,7 @@ pnpm add my-project
                   <CardContent className="p-6 text-center">
                     <h3 className="text-lg font-semibold mb-2">Ready to transform your README?</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Join <span className="number-centered">10,000+</span> developers who've improved their project documentation
+                      Join <span className="number-centered">10,000+</span> developers who&apos;ve improved their project documentation
                     </p>
                     <Link href="/readme-review">
                       <Button variant="gradient" size="lg" className="group">

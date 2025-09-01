@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ReadmePreview } from './readme-preview';
 import { SeoScore } from '@/components/ui/seo-score';
-import { ReadmeFormData, Feature, InstallationStep } from '@/types';
+import { Feature, InstallationStep } from '@/types';
 
 const readmeSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
@@ -37,7 +37,7 @@ type ReadmeFormValues = z.infer<typeof readmeSchema>;
 
 export function ReadmeEditor() {
   const [previewMode, setPreviewMode] = useState<'split' | 'preview'>('split');
-  const [seoScore, setSeoScore] = useState(87);
+  const [seoScore] = useState(87);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ReadmeFormValues>({
     resolver: zodResolver(readmeSchema),
@@ -264,9 +264,10 @@ export function ReadmeEditor() {
                         <select
                           className="flex h-10 rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
                           value={install.packageManager}
-                          onChange={(e) => {
-                            const updated = [...formData.installation];
-                            updated[index] = { ...install, packageManager: e.target.value as any };
+                        onChange={(e) => {
+                          const updated = [...formData.installation];
+                            type PkgMgr = 'npm' | 'yarn' | 'pnpm' | 'bun'
+                            updated[index] = { ...install, packageManager: e.target.value as PkgMgr };
                             setValue('installation', updated);
                           }}
                         >

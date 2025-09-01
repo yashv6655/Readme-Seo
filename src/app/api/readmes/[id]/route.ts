@@ -2,11 +2,12 @@ import { NextRequest } from 'next/server'
 import { requireApiAuth } from '@/lib/auth/api-auth'
 import { getReadmeById, updateReadme, deleteReadme } from '@/lib/database/readmes'
 import type { UpdateReadmeInput } from '@/lib/database/types'
+import type { AuthUser } from '@/lib/auth/types'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
@@ -18,7 +19,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
 
     const { user } = authResult
-    const readme = await getReadmeById(params.id, user.id)
+    const { id } = await params
+    const readme = await getReadmeById(id, (user as AuthUser).id)
 
     if (!readme) {
       return Response.json({ error: 'README not found' }, { status: 404 })
@@ -53,7 +55,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       template_id: body.template_id
     }
 
-    const readme = await updateReadme(params.id, user.id, input)
+    const { id } = await params
+    const readme = await updateReadme(id, (user as AuthUser).id, input)
 
     return Response.json({ readme })
   } catch (error) {
@@ -76,7 +79,8 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     }
 
     const { user } = authResult
-    await deleteReadme(params.id, user.id)
+    const { id } = await params
+    await deleteReadme(id, (user as AuthUser).id)
 
     return Response.json({ message: 'README deleted successfully' })
   } catch (error) {

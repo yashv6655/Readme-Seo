@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { 
   Code2, 
@@ -12,7 +13,6 @@ import {
   Star, 
   ArrowRight,
   Eye,
-  Download,
   Heart
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -127,7 +127,7 @@ const templates: ReadmeTemplate[] = [
   }
 ];
 
-const categoryIcons: Record<TemplateCategory, any> = {
+const categoryIcons: Record<TemplateCategory, LucideIcon> = {
   library: Code2,
   'web-app': Globe,
   'cli-tool': Terminal,
@@ -275,7 +275,7 @@ export function TemplateGallery({ onSelectTemplate }: TemplateGalleryProps) {
                     <div className="flex-1">
                       <CardTitle className="text-lg">{template.name}</CardTitle>
                       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <span className="number-centered">{template.usageCount.toLocaleString()} uses</span>
+                        <span className="number-centered">{(template.usageCount || 0).toLocaleString()} uses</span>
                         <span>•</span>
                         <span className="capitalize">{categoryLabels[template.category]}</span>
                       </div>

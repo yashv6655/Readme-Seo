@@ -120,7 +120,6 @@ export async function POST(req: NextRequest) {
       for (const p of candidates) {
         // Stop if we collected enough
         if (Object.values(snippets).join("\n").length > 80_000) break;
-        // eslint-disable-next-line no-await-in-loop
         snippets[p] = await ghText(repo!, p, branch, ghToken);
       }
 
@@ -162,7 +161,8 @@ export async function POST(req: NextRequest) {
     if (!text) return Response.json({ error: "Claude returned empty response" }, { status: 502 });
 
     return new Response(text, { headers: { "content-type": "text/markdown; charset=utf-8" } });
-  } catch (err: any) {
-    return Response.json({ error: "Unexpected error", details: String(err?.message || err) }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: "Unexpected error", details: message }, { status: 500 });
   }
 }

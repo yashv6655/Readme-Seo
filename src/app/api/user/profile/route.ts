@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireApiAuth } from "@/lib/auth/api-auth";
+import type { AuthUser } from "@/lib/auth/types";
 
 export async function GET() {
   try {
@@ -10,17 +11,19 @@ export async function GET() {
     }
 
     const { user } = authResult;
+    const authUser = user as AuthUser;
     
     return Response.json({
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at,
-      user_metadata: user.user_metadata,
+      id: authUser.id,
+      email: authUser.email,
+      created_at: authUser.created_at,
+      user_metadata: authUser.user_metadata,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return Response.json({ 
       error: "Unexpected error", 
-      details: String(err?.message || err) 
+      details: message 
     }, { status: 500 });
   }
 }
@@ -34,21 +37,23 @@ export async function PATCH(req: NextRequest) {
     }
 
     const { user } = authResult;
-    const body = await req.json().catch(() => ({}));
+    const authUser = user as AuthUser;
+    await req.json().catch(() => ({}));
     
     // Here you would update user profile data
     // For now, just return the current user data
     return Response.json({
       message: "Profile update not implemented yet",
       user: {
-        id: user.id,
-        email: user.email,
+        id: authUser.id,
+        email: authUser.email,
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return Response.json({ 
       error: "Unexpected error", 
-      details: String(err?.message || err) 
+      details: message 
     }, { status: 500 });
   }
 }

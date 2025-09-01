@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
     const content = Buffer.from(data.content || "", data.encoding as BufferEncoding).toString("utf-8");
 
     return Response.json({ content, sha: data.sha, path: data.path, ref: refParam || undefined });
-  } catch (err: any) {
-    return Response.json({ error: "Unexpected error", details: String(err?.message || err) }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: "Unexpected error", details: message }, { status: 500 });
   }
 }

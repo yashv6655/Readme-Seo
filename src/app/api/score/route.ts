@@ -25,7 +25,7 @@ function buildUserPrompt(content: string) {
 export async function POST(req: NextRequest) {
   try {
     // Public endpoint: no auth required, but track authenticated users
-    const { user } = await getApiUser();
+    await getApiUser();
     const body = await req.json().catch(() => ({}));
     const content: string | undefined = body?.content;
     if (!content || typeof content !== "string") {
@@ -70,12 +70,13 @@ export async function POST(req: NextRequest) {
     let parsed: ScoreResult | null = null;
     try {
       parsed = JSON.parse(text);
-    } catch (e) {
+    } catch {
       return Response.json({ error: "Claude returned non-JSON", raw: text }, { status: 502 });
     }
 
     return Response.json(parsed);
-  } catch (err: any) {
-    return Response.json({ error: "Unexpected error", details: String(err?.message || err) }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: "Unexpected error", details: message }, { status: 500 });
   }
 }

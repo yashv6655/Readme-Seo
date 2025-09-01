@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
@@ -38,7 +39,7 @@ export function ReadmePreview({ data, fullscreen = false }: ReadmePreviewProps) 
     ].join(' ');
 
     // Generate markdown
-    let markdown = `<div align="center">
+    const markdown = `<div align="center">
   
 # ${projectName}
 
@@ -178,20 +179,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
           <div className="p-6">
             <ReactMarkdown
               components={{
-                code({ node, inline, className, children, ...props }) {
+                code(props: React.ComponentProps<'code'>) {
+                  const { className, children } = props;
                   const match = /language-(\w+)/.exec(className || '');
+                  const inline = !match;
                   return !inline && match ? (
                     <SyntaxHighlighter
                       style={vscDarkPlus}
                       language={match[1]}
                       PreTag="div"
                       className="rounded-lg"
-                      {...props}
                     >
                       {String(children).replace(/\n$/, '')}
                     </SyntaxHighlighter>
                   ) : (
-                    <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
+                    <code className="bg-muted px-1.5 py-0.5 rounded text-sm">
                       {children}
                     </code>
                   );
@@ -229,9 +231,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
                   </a>
                 ),
                 img: ({ src, alt }) => (
-                  <img 
-                    src={src} 
-                    alt={alt} 
+                  <Image 
+                    src={typeof src === 'string' ? src : ''} 
+                    alt={alt || ''}
+                    width={800}
+                    height={400} 
                     className="rounded-lg shadow-md max-w-full h-auto"
                   />
                 )

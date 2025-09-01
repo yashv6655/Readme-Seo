@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireApiAuth } from '@/lib/auth/api-auth'
 import { getOrCreateUserReadme } from '@/lib/database/readmes'
+import type { AuthUser } from '@/lib/auth/types'
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const githubUrl = searchParams.get('github_url') || undefined
 
-    const readme = await getOrCreateUserReadme(user.id, githubUrl)
+    const readme = await getOrCreateUserReadme((user as AuthUser).id, githubUrl)
 
     return Response.json({ readme })
   } catch (error) {

@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest } from 'next/server'
 
 export interface AuthResult {
   user: unknown | null
@@ -19,7 +18,7 @@ export async function getApiUser(): Promise<AuthResult> {
     }
 
     return { user, error: null }
-  } catch (error) {
+  } catch {
     return { user: null, error: 'Authentication check failed' }
   }
 }

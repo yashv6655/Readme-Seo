@@ -1,11 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { UserMenu } from '@/components/auth/user-menu'
 import { Button } from '@/components/ui/button'
 import { Sparkles, FileText, Zap, Plus, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import type { AuthUser } from '@/lib/auth/types'
 
 interface DashboardClientProps {
@@ -13,6 +16,89 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ user }: DashboardClientProps) {
+  const router = useRouter()
+  const [sessionVerified, setSessionVerified] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(true)
+
+  useEffect(() => {
+    // Verify session is accessible on client side
+    const verifySession = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Session verification error:', error)
+          // Redirect to login if no valid session
+          router.push('/login')
+          return
+        }
+        
+        if (session?.user) {
+          setSessionVerified(true)
+        } else {
+          // Try to refresh session
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+          
+          if (!refreshError && refreshedSession?.user) {
+            setSessionVerified(true)
+          } else {
+            console.error('Session refresh failed:', refreshError)
+            router.push('/login')
+          }
+        }
+      } catch (err) {
+        console.error('Session verification exception:', err)
+        router.push('/login')
+      } finally {
+        setIsVerifying(false)
+      }
+    }
+
+    verifySession()
+  }, [router])
+
+  const handleProtectedNavigation = async (path: string) => {
+    // Double-check session before navigation to protected routes
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
+        router.push(path)
+      } else {
+        // Try refresh one more time
+        const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
+        if (refreshedSession?.user) {
+          router.push(path)
+        } else {
+          router.push('/login')
+        }
+      }
+    } catch (err) {
+      console.error('Navigation auth check failed:', err)
+      router.push('/login')
+    }
+  }
+
+  // Show loading state while verifying session
+  if (isVerifying) {
+    return (
+      <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 animated-gradient opacity-20" />
+        <div className="relative z-10 text-center">
+          <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-spin">
+            <div className="w-10 h-10 bg-background rounded-full m-1"></div>
+          </div>
+          <p className="text-muted-foreground">Verifying session...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!sessionVerified) {
+    return null // Will redirect to login
+  }
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Animated gradient background */}
@@ -76,25 +162,26 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <Link href="/readme-review">
-              <Card className="glass-card hover:scale-105 transition-all duration-300 group cursor-pointer h-full">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Plus className="w-8 h-8 text-white" />
-                  </div>
-                  <CardTitle className="text-2xl gradient-text">Create README</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground mb-6">
-                    Start a new README project with AI-powered optimization and SEO scoring.
-                  </p>
-                  <Button className="btn-gradient w-full group">
-                    Get Started
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card className="glass-card hover:scale-105 transition-all duration-300 group h-full">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Plus className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl gradient-text">Create README</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-muted-foreground mb-6">
+                  Start a new README project with AI-powered optimization and SEO scoring.
+                </p>
+                <Button 
+                  className="btn-gradient w-full group" 
+                  onClick={() => handleProtectedNavigation('/readme-review')}
+                >
+                  Get Started
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* Browse Templates */}
@@ -103,25 +190,27 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Link href="/templates">
-              <Card className="glass-card hover:scale-105 transition-all duration-300 group cursor-pointer h-full">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <FileText className="w-8 h-8 text-white" />
-                  </div>
-                  <CardTitle className="text-2xl gradient-text">Browse Templates</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground mb-6">
-                    Choose from professionally designed templates for different project types.
-                  </p>
-                  <Button variant="outline" className="w-full group glass">
-                    View Templates
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card className="glass-card hover:scale-105 transition-all duration-300 group h-full">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl gradient-text">Browse Templates</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-muted-foreground mb-6">
+                  Choose from professionally designed templates for different project types.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full group glass"
+                  onClick={() => router.push('/templates')}
+                >
+                  View Templates
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* Editor */}
@@ -130,25 +219,27 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <Link href="/editor">
-              <Card className="glass-card hover:scale-105 transition-all duration-300 group cursor-pointer h-full">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Zap className="w-8 h-8 text-white" />
-                  </div>
-                  <CardTitle className="text-2xl gradient-text">Advanced Editor</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground mb-6">
-                    Use the full-featured editor with live preview and advanced formatting.
-                  </p>
-                  <Button variant="outline" className="w-full group glass">
-                    Open Editor
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card className="glass-card hover:scale-105 transition-all duration-300 group h-full">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl gradient-text">Advanced Editor</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-muted-foreground mb-6">
+                  Use the full-featured editor with live preview and advanced formatting.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full group glass"
+                  onClick={() => router.push('/editor')}
+                >
+                  Open Editor
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
 

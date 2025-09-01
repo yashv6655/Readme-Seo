@@ -9,25 +9,49 @@ export async function GET(request: NextRequest) {
   if (code) {
     try {
       const supabase = await createClient()
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code)
       
-      if (!error) {
-        const forwardedHost = request.headers.get('x-forwarded-host')
-        const isLocalEnv = process.env.NODE_ENV === 'development'
+      if (!error && session) {
+        // Verify the session was created properly
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
         
-        if (isLocalEnv) {
-          // In development, redirect to the local URL
-          return NextResponse.redirect(`${origin}${next}`)
-        } else if (forwardedHost) {
-          // In production, use the forwarded host
-          return NextResponse.redirect(`https://${forwardedHost}${next}`)
-        } else {
-          // Fallback to origin
-          return NextResponse.redirect(`${origin}${next}`)
+        if (!userError && user) {
+          // Create response with proper redirect
+          const forwardedHost = request.headers.get('x-forwarded-host')
+          const isLocalEnv = process.env.NODE_ENV === 'development'
+          
+          let redirectUrl: string
+          if (isLocalEnv) {
+            redirectUrl = `${origin}${next}`
+          } else if (forwardedHost) {
+            redirectUrl = `https://${forwardedHost}${next}`
+          } else {
+            redirectUrl = `${origin}${next}`
+          }
+          
+          // Create the redirect response
+          const response = NextResponse.redirect(redirectUrl)
+          
+          // Ensure cookies are properly set for the domain
+          if (!isLocalEnv && forwardedHost) {
+            // In production, ensure cookies work across the domain
+            response.cookies.set('supabase-auth-token', session.access_token, {
+              httpOnly: true,
+              secure: true,
+              sameSite: 'lax',
+              domain: `.${forwardedHost.split('.').slice(-2).join('.')}`, // e.g., .vercel.app
+              path: '/',
+              maxAge: session.expires_in || 3600
+            })
+          }
+          
+          return response
         }
       }
+      
+      console.error('Auth callback error:', error || 'No session created')
     } catch (error) {
-      console.error('Auth callback error:', error)
+      console.error('Auth callback exception:', error)
     }
   }
 

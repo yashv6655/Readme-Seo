@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/providers/auth-provider'
 import type { ReadmeRecord, ReadmeMetadata } from '@/lib/database/types'
+import posthog from 'posthog-js'
 
 interface UseReadmePersistenceOptions {
   autoSaveDelay?: number
@@ -123,9 +124,22 @@ export function useReadmePersistence(
       const data = await response.json()
       setCurrentReadme(data.readme)
       setLastSaved(new Date())
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        const deltaBytes = (pendingContent?.length || 0) - (currentReadme.content?.length || 0)
+        posthog.capture('readme_saved', {
+          autosave: !force,
+          editor_length: pendingContent?.length || 0,
+          delta_bytes: deltaBytes,
+        })
+      }
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save README')
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture('save_failed', {
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }
     } finally {
       setIsSaving(false)
     }

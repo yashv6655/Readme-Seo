@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { AuthContextType, AuthUser } from '@/lib/auth/types'
 import type { User } from '@supabase/supabase-js'
+import posthog from 'posthog-js'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -21,6 +22,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(session?.user as AuthUser | null)
       setLoading(false)
+
+      // Identify user in PostHog (if configured)
+      const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
+      if (key && session?.user) {
+        const email = (session.user as any)?.email as string | undefined
+        const domain = email?.includes('@') ? email.split('@')[1] : undefined
+        posthog.identify(session.user.id, {
+          email_domain: domain,
+          is_authenticated: true,
+        })
+      }
     }
 
     getInitialSession()
@@ -31,6 +43,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user as AuthUser | null)
       setLoading(false)
+
+      const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
+      if (key) {
+        if (session?.user) {
+          const email = (session.user as any)?.email as string | undefined
+          const domain = email?.includes('@') ? email.split('@')[1] : undefined
+          posthog.identify(session.user.id, {
+            email_domain: domain,
+            is_authenticated: true,
+          })
+          posthog.capture(event === 'SIGNED_IN' ? 'auth_sign_in' : 'auth_event', { event })
+        } else {
+          posthog.capture('auth_sign_out')
+          posthog.reset()
+        }
+      }
     })
 
     return () => subscription.unsubscribe()

@@ -1,0 +1,50 @@
+"use client";
+
+import { useEffect } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+
+// Importing posthog-js directly; ensure dependency exists in package.json
+import posthog from "posthog-js";
+
+type Props = { children?: React.ReactNode };
+
+// Initializes PostHog and tracks page views on route changes.
+export default function AnalyticsProvider({ children }: Props) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Initialize once on mount
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    if (!key) return; // no-op if not configured
+
+    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com";
+
+    // Avoid double init in Fast Refresh
+    if (!(window as any).__posthog_inited) {
+      posthog.init(key, {
+        api_host: host,
+        capture_pageview: false, // we will capture manually
+      });
+      (window as any).__posthog_inited = true;
+
+      posthog.register({
+        environment: process.env.NODE_ENV,
+      });
+    }
+
+    // Initial page view
+    posthog.capture("page_view", { path: window.location.pathname });
+  }, []);
+
+  // Track route changes as page views
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    if (!key) return;
+    const path = pathname + (searchParams?.toString() ? `?${searchParams?.toString()}` : "");
+    posthog.capture("page_view", { path: path });
+  }, [pathname, searchParams]);
+
+  return children as React.ReactElement | null;
+}
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useEffect } from "react";
+import posthog from "posthog-js";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -70,6 +71,15 @@ function ReadmeReviewContent() {
     setLoading("fetch");
     setError(null);
     try {
+      const started = performance.now();
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        const [owner, name] = repo.split("/");
+        posthog.capture("readme_fetch_started", {
+          repo_owner: owner,
+          repo_name: name,
+          branch: branch || undefined,
+        });
+      }
       const url = new URL(`/api/readme`, window.location.origin);
       url.searchParams.set("repo", repo.trim());
       if (branch) url.searchParams.set("ref", branch.trim());
@@ -88,8 +98,19 @@ function ReadmeReviewContent() {
         score: undefined, // Clear score
       });
       setOptimized(null);
+
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("readme_fetch_succeeded", {
+          duration_ms: Math.round(performance.now() - started),
+        });
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("readme_fetch_failed", {
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
     } finally {
       setLoading(null);
     }
@@ -99,6 +120,13 @@ function ReadmeReviewContent() {
     setLoading("score");
     setError(null);
     try {
+      const started = performance.now();
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("score_requested", {
+          content_length: currentContent?.length || 0,
+          source: actionSource,
+        });
+      }
       const res = await fetch("/api/score", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -112,8 +140,20 @@ function ReadmeReviewContent() {
         score: data as ScoreResult,
         lastAction: `Scoring ${actionSource}`,
       });
+
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("score_succeeded", {
+          duration_ms: Math.round(performance.now() - started),
+          score: Math.round((data as ScoreResult).score),
+        });
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("score_failed", {
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
     } finally {
       setLoading(null);
     }
@@ -126,6 +166,13 @@ function ReadmeReviewContent() {
     const actionText = willUseRepo ? "Generating from repo context" : "Optimizing editor content";
     
     try {
+      const started = performance.now();
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("optimize_requested", {
+          uses_repo_context: willUseRepo,
+          editor_length: readme?.length || 0,
+        });
+      }
       const res = await fetch("/api/optimize", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -145,8 +192,20 @@ function ReadmeReviewContent() {
         previewSource: "optimized",
         lastAction: actionText,
       });
+
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("optimize_succeeded", {
+          duration_ms: Math.round(performance.now() - started),
+          optimized_length: data?.length || 0,
+        });
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("optimize_failed", {
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
     } finally {
       setLoading(null);
     }
@@ -165,11 +224,18 @@ function ReadmeReviewContent() {
       lastAction: "Applied optimized to editor",
     });
     setOptimized(null);
+
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      posthog.capture("optimized_applied_to_editor");
+    }
   }, [optimized, updateContent, updateMetadata]);
 
   // Handle manual saves
   const handleManualSave = useCallback(() => {
     saveReadme(true); // Force save
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      posthog.capture("readme_saved", { autosave: false });
+    }
   }, [saveReadme]);
 
   // Handle action source changes

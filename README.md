@@ -1,57 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Readme Generator is a full‑stack Next.js app that scores, improves, and manages README files with AI assistance.
 
-## Getting Started
+Live: https://readme-seo.vercel.app/
 
-First, run the development server:
+## What This Project Delivers
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- ETL: Extracts README/context from GitHub, transforms with AI, loads into the editor/DB.
+- Full‑stack: Next.js App Router UI + API routes + Supabase Postgres.
+- Deployed: Production at https://readme-seo.vercel.app/ (Vercel).
+- Database: Supabase with RLS, tables for `readmes`.
+- Secure: Auth via Supabase, RLS‑protected tables, protected routes, server‑side env usage, minimal analytics PII.
+- ICP Fit (Sita): Helps devs and teams quickly produce clear docs that reduce “where is this?” questions and speed onboarding.
+- Design: Clean, responsive UI using Tailwind, dark mode, consistent components.
+- Analytics: PostHog event tracking for usage, success, and UX flows.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- UI: Next.js 15 App Router (pages in `src/app/`), Tailwind components in `src/components/`.
+- API: Route handlers under `src/app/api/*`:
+  - `POST /api/score` — scores a README via Claude.
+  - `POST /api/optimize` — improves README; can pull repo context via GitHub API.
+  - `GET/POST /api/readmes` — CRUD for saved READMEs (auth required).
+- Data: Supabase Postgres (`readmes`, `templates`, `analytics`) with Row‑Level Security.
+- Auth: Supabase SSR/Browser clients; middleware gatekeeps protected pages.
+- Analytics: PostHog initialized in a provider; auth identification without PII content.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ETL Flow (concise)
 
-## Learn More
+- Extract: Optionally fetches repository files and current README via GitHub API in `api/optimize`.
+- Transform: Uses Anthropic Claude to score/improve markdown (`api/score`, `api/optimize`).
+- Load: Saves edits/optimized output to Supabase (`src/lib/database/readmes.ts`) and the in‑app editor.
 
-To learn more about Next.js, take a look at the following resources:
+## Security Posture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Auth required for user data APIs (`requireApiAuth`), protected routes via `middleware.ts`.
+- Supabase RLS policies restrict rows to the owner only (see `supabase/schema.sql`).
+- Secrets stay server‑side: `CLAUDE_KEY`, `GITHUB_TOKEN`; client reads only `NEXT_PUBLIC_*`.
+- Analytics is metadata‑only; no README content sent to PostHog.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## ICP Fit (Sita)
 
-## Deploy on Vercel
+- Target users: developers in large or confusing codebases, new hires, scaling teams.
+- Pain solved: faster onboarding, fewer “where is this?” pings, less time spelunking.
+- Why this app: generates clear, current READMEs that make codebases navigable.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Design Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Tailwind for speed and consistency; responsive layouts and dark mode.
+- Reusable UI components; focused editor and review flows.
+- Friendly defaults; avoids visual clutter to highlight content quality.
 
 ## Analytics (PostHog)
 
-Environment:
+- Provider: initializes PostHog and captures `$pageview`/`$pageleave`.
+- Auth identify/reset: domain‑only props; ties events to sessions without PII.
+- Key events: `score_*`, `optimize_*`, `readme_saved`, `optimized_applied_to_editor`.
+- Purpose: understand usage funnels, success/latency, and feature adoption.
+
+## Tools & Rationale
+
+- Next.js (App Router): modern full‑stack framework with file‑based routes and edge‑ready APIs.
+- TypeScript: safer refactors and API contracts.
+- Supabase (Postgres + Auth): fast hosted DB with RLS; simple SSR/Client SDKs.
+- Anthropic Claude: strong instruction‑following for structured README outputs.
+- GitHub API: ground responses in real repo context when available.
+- PostHog: product analytics without vendor lock‑in; web‑first SDK.
+- Tailwind CSS: rapid, consistent UI without bespoke design system overhead.
+- Vercel: zero‑config deploys, preview environments, and caching.
+
+## Build Process (summary)
+
+- Define schema and RLS (Supabase) and auth gating.
+- Implement editor, scoring, and optimization flows end‑to‑end.
+- Add PostHog analytics and event taxonomy.
+- Polish UI with Tailwind components and dark mode.
+- Deploy to Vercel; wire environment variables per environment.
+
+## How to Run
+
+Environment variables (examples):
 
 ```
-NEXT_PUBLIC_POSTHOG_KEY=phc_...
-# Optional: NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+CLAUDE_KEY=...
+GITHUB_TOKEN=...            # for GitHub context in /api/optimize (optional but recommended)
+NEXT_PUBLIC_POSTHOG_KEY=... # optional analytics
+NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 ```
 
-Instrumentation summary:
+Commands (from project root `readme-generator/`):
 
-- AnalyticsProvider: Initializes PostHog and sends page_view on route changes. Reason: measure navigation and drop‑offs between pages.
-- Auth identify/reset: Identifies users on sign‑in, resets on sign‑out, using only email_domain and is_authenticated. Reason: tie events to users/orgs without storing PII.
-- score_requested/succeeded/failed: In `src/app/readme-review/PageClient.tsx` around `/api/score`. Reason: measure usage, success rate, latency, and score outcome.
-- optimize_requested/succeeded/failed: In `src/app/readme-review/PageClient.tsx` around `/api/optimize`. Reason: measure optimization usage, latency, and output size (transform step).
-- optimized_applied_to_editor: In `src/app/readme-review/PageClient.tsx` when applying AI output. Reason: adoption of AI suggestions.
-- readme_saved (+ autosave flag, delta_bytes): In `src/hooks/use-readme-persistence.ts`. Reason: persistence behavior, edit magnitude (load/store step).
-- page_view super props: Sets environment for basic segmentation. Reason: split dev/preview/prod traffic.
+```
+npm run dev     # http://localhost:3000
+npm run build   # production build
+npm start       # serve production build
+npm run lint    # eslint checks
+```
 
-Privacy: No README text is sent; only metadata like lengths, durations, status codes, and score values.
+## Notes
+
+- Database tables and policies live in `supabase/schema.sql`.
+- Sensitive keys are not committed; mirror non‑sensitive keys in `.env.example`.
+- Issues and PRs welcome; please run `npm run build` and `npm run lint` before opening PRs.

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SeoScore } from "@/components/ui/seo-score";
+import { ProtectedRoute } from "@/components/auth/protected-route";
 
 type ScoreResult = {
   score: number;
@@ -19,7 +20,7 @@ type ScoreResult = {
 
 type Source = "editor" | "optimized";
 
-export default function PageClient() {
+function ReadmeReviewContent() {
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [readme, setReadme] = useState("");
@@ -268,5 +269,13 @@ export default function PageClient() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function PageClient() {
+  return (
+    <ProtectedRoute>
+      <ReadmeReviewContent />
+    </ProtectedRoute>
   );
 }

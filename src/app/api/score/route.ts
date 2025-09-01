@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getApiUser } from "@/lib/auth/api-auth";
 
 type ScoreResult = {
   score: number;
@@ -23,7 +24,8 @@ function buildUserPrompt(content: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Public endpoint: no auth required
+    // Public endpoint: no auth required, but track authenticated users
+    const { user } = await getApiUser();
     const body = await req.json().catch(() => ({}));
     const content: string | undefined = body?.content;
     if (!content || typeof content !== "string") {

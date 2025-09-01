@@ -30,7 +30,8 @@ function AnalyticsProviderInner({ children }: Props) {
     if (!window.__posthog_inited) {
       posthog.init(key, {
         api_host: host,
-        capture_pageview: false, // we will capture manually
+        capture_pageview: false, // we will capture manually with correct event names
+        capture_pageleave: false, // we will capture manually
       });
       window.__posthog_inited = true;
 
@@ -39,15 +40,42 @@ function AnalyticsProviderInner({ children }: Props) {
       });
     }
 
-    // Do not capture here; the route effect below will handle initial + subsequent views
+    // Set up page leave tracking
+    const handlePageLeave = () => {
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("$pageleave");
+      }
+    };
+
+    // Track page leaves on various events
+    window.addEventListener("beforeunload", handlePageLeave);
+    window.addEventListener("pagehide", handlePageLeave);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        handlePageLeave();
+      }
+    });
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener("beforeunload", handlePageLeave);
+      window.removeEventListener("pagehide", handlePageLeave);
+      document.removeEventListener("visibilitychange", handlePageLeave);
+    };
   }, []);
 
-  // Track route changes as page views
+  // Track route changes as standard PostHog pageviews
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     if (!key) return;
     const path = pathname + (searchParams?.toString() ? `?${searchParams?.toString()}` : "");
-    posthog.capture("page_view", { path: path });
+    
+    // Use standard PostHog $pageview event
+    posthog.capture("$pageview", { 
+      $current_url: window.location.href,
+      $pathname: pathname,
+      $search: searchParams?.toString() || ""
+    });
   }, [pathname, searchParams]);
 
   return children as React.ReactElement | null;

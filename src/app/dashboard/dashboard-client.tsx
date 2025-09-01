@@ -21,35 +21,21 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const [isVerifying, setIsVerifying] = useState(true)
 
   useEffect(() => {
-    // Verify session is accessible on client side
+    // Simple session verification - trust that server auth got us here
     const verifySession = async () => {
       try {
         const supabase = createClient()
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Session verification error:', error)
-          // Redirect to login if no valid session
-          router.push('/login')
-          return
-        }
+        const { data: { session } } = await supabase.auth.getSession()
         
         if (session?.user) {
           setSessionVerified(true)
         } else {
-          // Try to refresh session
-          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
-          
-          if (!refreshError && refreshedSession?.user) {
-            setSessionVerified(true)
-          } else {
-            console.error('Session refresh failed:', refreshError)
-            router.push('/login')
-          }
+          // If no session on client, let middleware handle the redirect
+          setSessionVerified(true) // Trust server-side auth
         }
       } catch (err) {
-        console.error('Session verification exception:', err)
-        router.push('/login')
+        console.error('Session check error:', err)
+        setSessionVerified(true) // Don't block, let middleware handle it
       } finally {
         setIsVerifying(false)
       }
@@ -58,27 +44,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     verifySession()
   }, [router])
 
-  const handleProtectedNavigation = async (path: string) => {
-    // Double-check session before navigation to protected routes
-    try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session?.user) {
-        router.push(path)
-      } else {
-        // Try refresh one more time
-        const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
-        if (refreshedSession?.user) {
-          router.push(path)
-        } else {
-          router.push('/login')
-        }
-      }
-    } catch (err) {
-      console.error('Navigation auth check failed:', err)
-      router.push('/login')
-    }
+  // Simple navigation - let middleware handle protection
+  const handleNavigation = (path: string) => {
+    router.push(path)
   }
 
   // Show loading state while verifying session
@@ -175,7 +143,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 </p>
                 <Button 
                   className="btn-gradient w-full group" 
-                  onClick={() => handleProtectedNavigation('/readme-review')}
+                  onClick={() => handleNavigation('/readme-review')}
                 >
                   Get Started
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

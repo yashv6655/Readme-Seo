@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, LogOut, Settings } from 'lucide-react'
+import { User, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -47,11 +47,6 @@ export function UserMenu({ user }: UserMenuProps) {
             <p className="font-medium">{user.email}</p>
           </div>
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} disabled={loading}>
           <LogOut className="mr-2 h-4 w-4" />

@@ -54,11 +54,24 @@ function LoginPageInner() {
 
     if (error) {
       setError(error.message)
+      setLoading(false)
     } else {
-      router.push(redirectedFrom || '/dashboard')
+      // Strategy 1: Simple delay + window.location for immediate redirect
+      setTimeout(() => {
+        window.location.href = redirectedFrom || '/dashboard'
+      }, 100)
+      
+      // Strategy 2: Backup listener for auth state change (belt and suspenders)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          subscription.unsubscribe()
+          // Fallback redirect if the timeout approach fails
+          setTimeout(() => {
+            window.location.href = redirectedFrom || '/dashboard'
+          }, 200)
+        }
+      })
     }
-    
-    setLoading(false)
   }
 
   return (

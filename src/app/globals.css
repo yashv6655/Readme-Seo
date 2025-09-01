@@ -133,6 +133,38 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
   }
+
+  /* README preview helpers */
+  .readme-preview {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+  .readme-preview img,
+  .readme-preview svg,
+  .readme-preview video,
+  .readme-preview canvas,
+  .readme-preview iframe,
+  .readme-preview embed,
+  .readme-preview object {
+    max-width: 100%;
+    height: auto;
+  }
+  .readme-preview table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .readme-preview pre {
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .readme-preview code {
+    word-break: break-word;
+  }
+  .readme-preview [align="center"],
+  .readme-preview .align-center {
+    text-align: center;
+  }
 }
 
 /* Keyframe animations */

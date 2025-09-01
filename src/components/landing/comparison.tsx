@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ArrowRight, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { SeoScore } from '@/components/ui/seo-score';
 
 export function Comparison() {
@@ -215,10 +216,12 @@ pnpm add my-project
                     <p className="text-sm text-muted-foreground mb-4">
                       Join <span className="number-centered">10,000+</span> developers who've improved their project documentation
                     </p>
-                    <Button variant="gradient" size="lg" className="group">
-                      Get Started Now
-                      <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </Button>
+                    <Link href="/readme-review">
+                      <Button variant="gradient" size="lg" className="group">
+                        Get Started Now
+                        <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
               </motion.div>

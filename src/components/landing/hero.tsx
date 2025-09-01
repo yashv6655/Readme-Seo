@@ -56,7 +56,7 @@ export function Hero() {
       </header>
 
       {/* Main content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 text-center pb-32 md:pb-40 lg:pb-48">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 text-center pb-56 md:pb-64 lg:pb-72">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -105,7 +105,7 @@ export function Hero() {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-md sm:max-w-none mx-auto"
           >
-            <Link href="/editor">
+            <Link href="/readme-review">
               <Button
                 variant="gradient"
                 size="lg"
@@ -131,7 +131,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.8 }}
-            className="flex flex-col sm:flex-row gap-4 md:gap-6 lg:gap-8 justify-center items-center text-center pt-12 mb-16 md:mb-20 lg:mb-24 px-4"
+            className="flex flex-col sm:flex-row gap-4 md:gap-6 lg:gap-8 justify-center items-center text-center pt-6 md:pt-8 lg:pt-10 mb-16 md:mb-20 lg:mb-24 px-4"
           >
             <div className="space-y-1 text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text number-centered">10,000+</div>
@@ -154,7 +154,7 @@ export function Hero() {
         initial={{ opacity: 0, y: 100, scale: 0.8 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: 0.8, duration: 1 }}
-        className="absolute bottom-8 md:bottom-10 lg:bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-sm md:max-w-2xl lg:max-w-4xl px-4 md:px-6"
+        className="relative lg:absolute lg:bottom-12 left-1/2 -translate-x-1/2 w-full max-w-sm md:max-w-2xl lg:max-w-4xl px-4 md:px-6 mt-10 md:mt-12"
       >
         <div className="glass-card p-4 md:p-6 lg:p-8 relative">
           {/* <div className="absolute top-4 left-4 flex space-x-2">

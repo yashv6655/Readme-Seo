@@ -21,6 +21,11 @@ type ScoreResult = {
   top_fixes: string[];
 };
 
+type KeywordResult = {
+  density: Array<[string, number]>;
+  suggestions: string[];
+};
+
 type Source = "editor" | "optimized";
 
 function ReadmeReviewContent() {
@@ -44,7 +49,7 @@ function ReadmeReviewContent() {
   // Local state for UI interactions
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
-  const [loading, setLoading] = useState<"fetch" | "score" | "opt" | null>(null);
+  const [loading, setLoading] = useState<"fetch" | "score" | "opt" | "keywords" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [optimized, setOptimized] = useState<string | null>(null);
 
@@ -53,6 +58,7 @@ function ReadmeReviewContent() {
   // Use pending metadata for immediate updates, fall back to saved metadata
   const combinedMetadata = { ...(currentReadme?.metadata as ReadmeMetadata || {}), ...pendingMetadata };
   const score = combinedMetadata.score || null;
+  const keywordData = combinedMetadata.keywordData || null;
   const sha = combinedMetadata.sha || null;
   const actionSource = combinedMetadata.actionSource || "editor";
   const previewSource = combinedMetadata.previewSource || "editor";
@@ -105,6 +111,7 @@ function ReadmeReviewContent() {
         lastAction: "Fetched README",
         optimized: undefined, // Clear optimized version
         score: undefined, // Clear score
+        keywordData: undefined,
       });
       setOptimized(null);
 
@@ -219,6 +226,44 @@ function ReadmeReviewContent() {
       setLoading(null);
     }
   }, [readme, repo, branch, updateMetadata]);
+
+  const runKeywordAnalysis = useCallback(async () => {
+    setLoading("keywords");
+    setError(null);
+    try {
+      const started = performance.now();
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("keywords_requested", {
+          content_length: currentContent?.length || 0,
+          source: actionSource,
+        });
+      }
+      const res = await fetch("/api/keywords", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: currentContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to analyze keywords");
+      
+      updateMetadata({ keywordData: data as KeywordResult, lastAction: `Analyzed Keywords` });
+
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("keywords_succeeded", {
+          duration_ms: Math.round(performance.now() - started),
+        });
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        posthog.capture("keywords_failed", {
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    } finally {
+      setLoading(null);
+    }
+  }, [currentContent, actionSource, updateMetadata]);
 
   const applyOptimized = useCallback(() => {
     if (!optimized) return;
@@ -340,8 +385,11 @@ function ReadmeReviewContent() {
                 placeholder="# Paste or fetch a README.md here"
               />
             </CardContent>
-            <CardFooter className="flex items-center gap-2">
-              <Button variant="gradient" onClick={runScore} loading={loading === 'score'} disabled={!currentContent}>
+            <CardFooter className="flex items-center gap-2 flex-wrap">
+              <Button variant="gradient" onClick={runKeywordAnalysis} loading={loading === 'keywords'} disabled={!currentContent}>
+                Analyze Keywords
+              </Button>
+              <Button variant="outline" onClick={runScore} loading={loading === 'score'} disabled={!currentContent}>
                 Score {actionSource === 'optimized' ? '(Optimized)' : '(Editor)'}
               </Button>
               <Button variant="outline" onClick={runOptimize} loading={loading === 'opt'} disabled={!readme}>
@@ -377,7 +425,44 @@ function ReadmeReviewContent() {
           </Card>
         </div>
 
-        {/* Results */}
+        {/* Keyword Analysis Results */}
+        {keywordData && (
+          <Card glass>
+            <CardHeader>
+              <CardTitle>Keyword Analysis</CardTitle>
+              <CardDescription>
+                An analysis of your README's keyword density and AI-powered suggestions for improving SEO.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <div className="text-sm font-medium mb-2">Keyword Density</div>
+                  <div className="space-y-2">
+                    {keywordData.density.map(([keyword, count]) => (
+                      <div key={keyword} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                        <span className="font-medium">{keyword}</span>
+                        <span className="text-muted-foreground">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium mb-2">Keyword Suggestions</div>
+                  <div className="space-y-2">
+                    {keywordData.suggestions.map((keyword) => (
+                      <div key={keyword} className="rounded-lg border px-3 py-2 text-sm">
+                        <span className="font-medium">{keyword}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* SEO Score Results */}
         {score && (
           <Card glass>
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -22,6 +22,10 @@ export interface ReadmeMetadata {
     summary: string[]
     top_fixes: string[]
   }
+  keywordData?: {
+    density: Array<[string, number]>;
+    suggestions: string[];
+  }
   optimized?: string
   actionSource?: 'editor' | 'optimized'
   previewSource?: 'editor' | 'optimized'
